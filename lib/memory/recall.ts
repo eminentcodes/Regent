@@ -66,13 +66,14 @@ async function recallNamespace(
   query: string,
   scope: MemoryScope,
   limit: number,
+  maxDistance = MAX_DISTANCE,
 ): Promise<RecalledMemory[]> {
   const result = await memwal().recall({
     query,
     namespace,
     limit,
     sort: "relevance",
-    maxDistance: MAX_DISTANCE,
+    maxDistance,
   })
   const memories: RecalledMemory[] = []
 
@@ -94,10 +95,11 @@ async function recallTier(
   scope: MemoryScope,
   limit: number,
   failures: string[],
+  maxDistance = MAX_DISTANCE,
 ): Promise<RecalledMemory[]> {
   try {
     return (await withDeadline(
-      recallNamespace(namespace, query, scope, limit),
+      recallNamespace(namespace, query, scope, limit, maxDistance),
       RECALL_TIMEOUT_MS,
     )) as RecalledMemory[]
   } catch (error) {
@@ -128,7 +130,9 @@ export async function recallForTurn(
   const [knowledge, matched, standing, shared] = await Promise.all([
     recallTier(knowledgeNamespace(groupId), query, "knowledge", limit, failures),
     recallTier(personalNamespaceId, query, "personal", limit, failures),
-    recallTier(personalNamespaceId, PROFILE_QUERY, "personal", limit, failures),
+    // No relevance cutoff here. These are the customer's own standing facts:
+    // they belong in front of the model whatever the question is.
+    recallTier(personalNamespaceId, PROFILE_QUERY, "personal", limit, failures, 0.99),
     recallTier(sharedNamespace(groupId), query, "shared", limit, failures),
   ])
 

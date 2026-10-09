@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Trash } from 'lucide-react'
+import { ArrowUpRight, Database, Trash } from 'lucide-react'
 import { AppShell, PageBody } from '@/app/_components/app-shell'
 import { NeedsSignIn } from '@/app/_components/gates'
 import { useSession } from '@/app/_components/session-provider'
@@ -67,8 +67,8 @@ function MemoryContent() {
               What Reggie remembers
             </h1>
             <p className='max-w-[64ch] text-[0.9rem] leading-relaxed text-ink-muted'>
-              Your private memory. Nobody else sees this list, and nothing here is shared with other
-              shoppers.
+              Your private memory, written to Walrus on Sui mainnet. Every line links to the blob
+              that holds it, so you can check the write for yourself.
             </p>
           </div>
           {data ? (
@@ -117,10 +117,27 @@ function MemoryContent() {
 
                   <ul className='divide-y divide-line'>
                     {group.items.map((memory) => (
-                      <li key={memory.id} className='flex items-start gap-3 px-4 py-3.5'>
+                      <li key={memory.id} className='flex flex-col gap-2 px-4 py-3.5 sm:flex-row sm:items-start sm:gap-3'>
                         <p className='min-w-0 flex-1 text-[0.88rem] leading-relaxed text-ink'>
                           {secondPerson(memory.text)}
                         </p>
+                        <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-[0.74rem] text-ink-faint'>
+                          <span>{formatDate(memory.createdAt)}</span>
+                          {memory.blobUrl ? (
+                            <a href={memory.blobUrl} target='_blank' rel='noopener noreferrer'
+                              title={'Walrus blob ' + (memory.blobId ?? '')}
+                              className='inline-flex items-center gap-1 font-medium text-leaf hover:underline'>
+                              <Database className='size-3.5' strokeWidth={1.9} aria-hidden='true' />
+                              View on Walrus <ArrowUpRight className='size-3' aria-hidden='true' />
+                              <span className='sr-only'> (opens in a new tab)</span>
+                            </a>
+                          ) : (
+                            <span className='inline-flex items-center gap-1'>
+                              <Database className='size-3.5' aria-hidden='true' />
+                              write confirming on Walrus
+                            </span>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
