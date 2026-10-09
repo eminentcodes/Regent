@@ -5,6 +5,8 @@ import {
   knowledgeNamespace,
   type MemoryStatus,
 } from "@/lib/memwal"
+import { listMemories } from "@/lib/db/repo"
+import { parseFact } from "./taxonomy"
 
 export type MemoryScope = "knowledge" | "personal" | "shared"
 
@@ -139,10 +141,26 @@ export async function recallForTurn(
   // What matches the question comes first; the standing facts follow, and are
   // marked as clearly relevant so the interface reports them as recalled.
   const personal: RecalledMemory[] = [...matched]
+  const already = (text: string) => personal.some((existing) => existing.text === text)
+
   for (const memory of standing) {
-    if (personal.some((existing) => existing.text === memory.text)) continue
+    if (already(memory.text)) continue
     personal.push({ ...memory, distance: Math.min(memory.distance, 0.6) })
   }
+
+  // A write takes roughly a minute before the relayer can search it, and a
+  // customer often asks about their order straight away. The rows we recorded
+  // when the write was accepted are the same facts, so they fill that gap: the
+  // reply knows the customer immediately, and the blob id is attached to the
+  // row as soon as Walrus confirms it.
+  try {
+    const recorded = await listMemories(userId)
+    for (const row of recorded.slice(0, 8)) {
+      const text = parseFact(row.text).text
+      if (already(text)) continue
+      personal.push({ text, distance: 0.55, scope: "personal", createdAt: row.createdAt })
+    }
+  } catch { /* the Walrus tiers above still stand */ }
 
   const failedTiers = new Set(failures.map((failure) => failure.split(":")[0]))
   const count = knowledge.length + personal.length + shared.length
