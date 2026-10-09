@@ -1,0 +1,13 @@
+{
+  "passed": [
+    "Landing navigation and Walrus save, recall, new-device and forgetting example",
+    "Separate origins, legacy filter/fragment redirects and storefront API isolation",
+    "Store search, price sorting, empty state and category persistence",
+    "List persistence, external draft handoff, new-tab store link and guest account gate",
+    "Layouts at 320-1440px, mobile navigation, keyboard focus and list sheet",
+    "Light/dark screenshots, reduced motion and saved theme override"
+  ],
+  "errors": [],
+  "base": "http://localhost:3002",
+  "store": "http://localhost:3003"
+}

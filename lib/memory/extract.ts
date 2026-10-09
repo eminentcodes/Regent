@@ -1,0 +1,223 @@
+﻿import { generateText } from 'ai'
+import { z } from 'zod'
+import { memwal, personalNamespace, sharedNamespace } from '@/lib/memwal'
+import { languageModel } from '@/lib/llm'
+import { confirmMemoryBlob, recordMemory } from '@/lib/db/repo'
+import { MEMORY_TAGS, formatFact, looksPersonal } from './taxonomy'
+
+/**
+ * Extraction is where memory quality is won or lost. We own it instead of
+ * delegating it, so we can tag facts, keep the shared tier clean, and tell a
+ * customer why something was remembered.
+ */
+
+const factSchema = z.object({
+  facts: z.array(
+    z.object({
+      tag: z.enum(MEMORY_TAGS),
+      scope: z.enum(['personal', 'shared']),
+      text: z.string().min(3).max(240),
+    }),
+  ),
+})
+
+const EXTRACTION_SYSTEM = [
+  'You extract durable facts from one exchange between a customer and a grocery shop bot.',
+  '',
+  'Always look for these, they are the point of the exercise:',
+  '- Identity and household: their name, the area they live in, who they shop for, family.',
+  '- What they buy and how they like it: standing likes and dislikes.',
+  '- Constraints and safety: allergies, dietary needs, things they never want sent.',
+  '- Problems: a complaint, a bad delivery, anything still unresolved.',
+  '- Anything else important they tell you about themselves that will still matter next visit.',
+  '',
+  'The one thing to exclude:',
+  '- A request to buy something right now is an order line, not a fact about the customer. "I want rice", "add two loaves", "get me a crate of eggs" are basket items. Do not store them.',
+  '- Do not turn a single order into a habit. Only record a preference when they say it lasts: always, usually, every week, I prefer, I never want, I am allergic to, do not send me.',
+  '',
+  'Which tag:',
+  '- profile: who they are and where they live. Name, area, household, who they shop for.',
+  '- pref: a standing like or dislike about how they shop.',
+  '- event: a one-off that is still worth remembering, such as an unresolved complaint.',
+  '- issue: a problem, a complaint, or something that needs fixing.',
+  '',
+  'Rules:',
+  '- Write each fact as a short third-person sentence.',
+  '- The subject is always the customer, written as "The customer" or by their name if they gave one. Never write the assistant (Reggie) as the subject. Reggie is the bot. A fact about the customer must never be attributed to Reggie.',
+  '- Only things the customer said about themselves count. Never turn words spoken by the bot, or its suggestions and small talk, into a fact about the customer.',
+  '- Never store greetings, small talk, or anything you had to guess.',
+  '- A question is not a fact. Asking whether you deliver to Ikeja says nothing about where the customer lives. Asking the price of rice says nothing about what they buy.',
+  '- Never store a running total, an order summary, or a delivery slot as a preference. Those belong to the order, not the customer.',
+  '- NEVER store shop information. Prices, products, catalogue items, delivery zones and fees, and opening hours already live in the store knowledge base. The bot reciting them is not a memory.',
+  '- scope personal means the fact is about this customer. If they told you about themselves, it is personal.',
+  '- scope shared is rare and never about one customer. Use it only for a genuinely new shop-wide insight that is not shop information and cannot identify anyone.',
+  '- NEVER put names, emails, phone numbers, addresses or account ids into a shared fact.',
+  '- Extract every fact worth keeping from this exchange, not just one. An empty facts array is only for exchanges where they told you nothing about themselves.',
+].join('\n')
+
+const JSON_CONTRACT =
+  'Reply with JSON only, no prose and no code fences, exactly in this shape: ' +
+  '{"facts":[{"tag":"pref","scope":"personal","text":"..."}]}'
+
+export type ExtractOutcome = {
+  status: 'ok' | 'degraded'
+  written: number
+  shared: number
+  reason?: string
+}
+
+type PreparedFact = {
+  text: string
+  tag: string
+  scope: 'personal' | 'shared'
+  namespace: string
+}
+
+type Facts = z.infer<typeof factSchema>
+
+/**
+ * Some OpenRouter backends advertise structured outputs but drop the schema on
+ * the floor, so `generateObject` alone is not dependable. We try it, then fall
+ * back to plain text we parse ourselves.
+ */
+async function readFacts(prompt: string): Promise<Facts | null> {
+  // This provider accepts the request but ignores the JSON schema, so schema
+  // enforcement is not something we can rely on. We ask for JSON in plain text
+  // and parse it ourselves, which works across every model we can point at.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const { text } = await generateText({
+        model: languageModel(),
+        system: EXTRACTION_SYSTEM + '\n\n' + JSON_CONTRACT,
+        prompt,
+      })
+
+      const facts = parseFacts(text)
+      if (facts) return facts
+    } catch {
+      // Transient model or network failure. Try once more before giving up.
+    }
+  }
+
+  return null
+}
+function parseFacts(raw: string): Facts | null {
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+  if (start < 0 || end <= start) return null
+
+  try {
+    const parsed = factSchema.safeParse(JSON.parse(raw.slice(start, end + 1)))
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+export async function extractAndStore(input: {
+  groupId: string
+  userId: string
+  userMessage: string
+  assistantReply: string
+}): Promise<ExtractOutcome> {
+  try {
+    const prompt =
+      'Customer said:\n' + input.userMessage + '\n\nBot replied:\n' + input.assistantReply
+    const facts = await readFacts(prompt)
+
+    if (!facts) {
+      return { status: 'degraded', written: 0, shared: 0, reason: 'model returned no usable JSON' }
+    }
+
+    const prepared: PreparedFact[] = []
+
+    for (const fact of facts.facts) {
+      const tagged = formatFact(fact.tag, fact.text)
+      const isShared = fact.scope === 'shared'
+
+      // Guardrail: nothing personal is ever promoted to the shop namespace.
+      if (isShared && looksPersonal(tagged)) continue
+
+      prepared.push({
+        text: tagged,
+        tag: fact.tag,
+        scope: isShared ? 'shared' : 'personal',
+        namespace: isShared
+          ? sharedNamespace(input.groupId)
+          : personalNamespace(input.groupId, input.userId),
+      })
+    }
+
+    if (prepared.length === 0) {
+      return { status: 'ok', written: 0, shared: 0 }
+    }
+
+    // One batched request keeps us inside the relayer rate limit, which is per
+    // delegate key and easy to trip with one write per fact.
+    const accepted = await memwal().rememberBulk(
+      prepared.map((fact) => ({ text: fact.text, namespace: fact.namespace })),
+    )
+
+    for (let index = 0; index < prepared.length; index += 1) {
+      const fact = prepared[index]
+      await recordMemory({
+        groupId: input.groupId,
+        userId: input.userId,
+        namespace: fact.namespace,
+        scope: fact.scope,
+        text: fact.text,
+        tag: fact.tag,
+        jobId: accepted.job_ids[index] ?? null,
+      })
+    }
+
+    // Walrus confirms a blob after the relayer accepts the job. Attaching the
+    // real blob id is what proves the fact is on Walrus, not just in our table.
+    void confirmBlobs(accepted.job_ids)
+
+    return {
+      status: 'ok',
+      written: prepared.length,
+      shared: prepared.filter((fact) => fact.scope === 'shared').length,
+    }
+  } catch (error) {
+    return {
+      status: 'degraded',
+      written: 0,
+      shared: 0,
+      reason: error instanceof Error ? error.message : 'extraction failed',
+    }
+  }
+}
+
+/**
+ * Follows accepted write jobs until Walrus hands back a blob id, then records
+ * it. Deliberately not awaited: the reply has already reached the customer, and
+ * a slow relayer must never hold the request open.
+ */
+async function confirmBlobs(jobIds: string[]): Promise<void> {
+  const pending = new Set(jobIds.filter(Boolean))
+  const deadline = Date.now() + 120_000
+
+  while (pending.size > 0 && Date.now() < deadline) {
+    try {
+      const status = await memwal().getRememberBulkStatus([...pending])
+
+      for (const item of status.results) {
+        if (item.status === 'done' && item.blob_id) {
+          await confirmMemoryBlob(item.job_id, item.blob_id)
+          pending.delete(item.job_id)
+          continue
+        }
+        if (item.status === 'failed' || item.status === 'not_found') {
+          pending.delete(item.job_id)
+        }
+      }
+    } catch {
+      return
+    }
+
+    if (pending.size === 0) return
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+  }
+}

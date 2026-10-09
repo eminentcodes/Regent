@@ -1,0 +1,43 @@
+{
+  "name": "chatbot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "dev:store": "node scripts/store-site.mjs dev",
+    "build": "next build",
+    "build:store": "node scripts/store-site.mjs build",
+    "start": "next start --port 3002",
+    "start:store": "node scripts/store-site.mjs start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.62",
+    "@ai-sdk/react": "^4.0.131",
+    "@libsql/client": "^0.18.0",
+    "@mysten-incubation/memwal": "^0.1.8",
+    "ai": "^7.0.126",
+    "bcrypt-ts": "^9.0.2",
+    "drizzle-orm": "^0.45.3",
+    "jose": "^6.2.12",
+    "lucide-react": "^1.49.0",
+    "motion": "^13.4.6",
+    "next": "16.3.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "babel-plugin-react-compiler": "1.0.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.7",
+    "tailwindcss": "^4",
+    "typescript": "^6.0.3"
+  }
+}
