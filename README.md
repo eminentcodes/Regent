@@ -1,15 +1,10 @@
 # Regent
 
-**A grocery chat assistant that actually remembers you — because the memory is stored on Walrus.**
+**A grocery chat assistant that remembers your usual order, with customer memory stored on Walrus.**
 
-Regent is the ordering assistant for **Regency Stores**, a neighbourhood grocery in Yaba, Lagos.
-There is no product page and no checkout, because that is not how this shop's customers actually
-buy. **The chat is the counter.** Reggie takes the message, remembers what the customer says, and
-stores the important parts in Walrus Memory on Sui mainnet — so what it knows survives the browser,
-the phone, and whoever happens to be holding the phone that day.
+Regent is a chat-based ordering assistant for Regency Stores, a neighbourhood grocery store in Yaba, Lagos. Customers message Reggie as they would to a shop attendant, and Reggie helps with product questions while building a record of useful details the customer has shared. Those memories are stored through Walrus Memory on Sui mainnet, so they are not tied to a single browser, phone, or staff member.
 
 Built for **Walrus Sessions 8: Chatbots That Remember**.
-
 
 ---
 
@@ -33,53 +28,29 @@ Built for **Walrus Sessions 8: Chatbots That Remember**.
 
 ---
 
-## The problem
+## The Problem
 
-Regency Stores sells the same basket to the same people, week after week. **That repetition is the
-whole business.** A grocery in Yaba does not live on one big order; it lives on the customer who
-bought 1kg of carrots, a crate of eggs and brown honey beans on Saturday coming back the next
-Saturday to buy it again. Losing that customer is not losing one sale. It is losing the sale that
-was going to repeat every week for a year.
+A chat can handle a request in the moment, but it often loses the context that would make the next conversation easier.
 
-**The repeat order is exactly what the shop has no way to hold on to.**
+For a neighbourhood grocery store like Regency Stores, customer conversations can include more than a single shopping request. People may ask about products, share delivery details, mention what they buy regularly, or explain how they prefer to shop. When that information is buried in old messages or depends on one staff member remembering it, customers may have to repeat themselves and the shop has to piece the context together again.
 
-Orders come in on WhatsApp, so every repeat order starts from nothing. The customer retypes a list
-they have already typed thirty times, or scrolls back through a year of chat to find last week's
-message and copy it. Some give up and simply say **"the usual"** — and from there it is on whoever
-is holding the phone to know whose usual is whose. During a rush they guess. When that attendant
-leaves, what they knew leaves with them, and the next person at the phone starts every regular
-customer from scratch.
+The gap becomes clear when a returning customer says, “Can I get my usual?” or asks for something based on an earlier conversation. Without reliable access to that history, an assistant has little to work with beyond the latest message. It may need to ask the same questions again, or risk making assumptions about what the customer means.
 
-**The damage is quiet, but it adds up:**
+Regent explores a practical way to address that gap: give a chat-based grocery assistant a memory that can carry useful context from one conversation to the next. That means distinguishing a one-time request from a lasting preference, and making relevant information available when the customer returns.
 
-- The customer ends up doing the shop's remembering for it, every single week.
-- A guessed order is a wrong order — a refund, a wasted trip, and a customer who tries the shop
-  down the road next time.
-- The most valuable thing a grocery owns, a clear picture of what each regular buys, sits in one
-  person's head, on a phone that gets wiped, or in a notebook nobody can search.
-- **"The usual"** is the most valuable sentence in the shop, and it is the one thing the shop
-  cannot keep.
-
-A bot that only answers questions does not fix any of this. **It has to remember** — and what it
-remembers has to outlast the device, the browser and the staff. Something saved on one phone is not
-memory. It is only a longer session.
+The challenge is not simply remembering everything. It is remembering the right details, using them when they are relevant, and avoiding guesses when the information is missing.
 
 ## What Regent does
 
-Reggie takes the order and, at the same time, quietly builds the shop's memory of that customer.
-The customer types the way they would talk to a person. Behind the reply, the important parts are
-stored on Walrus.
+Regent gives Regency Stores a chat-based assistant called Reggie. Customers can talk naturally, ask about the shop, and share details that may be useful later. While Reggie responds, the app identifies relevant facts and stores them using Walrus Memory.
 
-- **The usual is remembered once.** "I always get brown honey beans every week" is stored. The next
-  visit, from any phone, Reggie already knows — so "the usual" finally means something.
-- **The writes are real and can be checked.** Every stored fact becomes a Walrus blob with an id
-  that opens on a Walrus explorer. Nothing is claimed here that cannot be shown.
-- **The remembering is real.** Every message asks Walrus Memory directly. Not a saved file on the
-  device, not the last conversation — Walrus.
-- **An order is not a preference.** "I want rice" is a line in today's basket. "I always buy rice"
-  is a fact about you. Only the second one is stored.
-- **It will not make things up about you.** If Reggie does not know a fact, it asks. It never
-  guesses an address, and it never confirms an order it cannot place.
+The key ideas are:
+
+- Remember the usual. If a customer says they buy brown honey beans every week, Reggie can use that information in a later conversation.
+- Keep memory beyond one device. Customer memories are stored through Walrus Memory on Sui mainnet rather than relying only on the current browser or chat session.
+- Make writes verifiable. Confirmed writes have Walrus blob IDs that can be opened in a Walrus explorer.
+- Separate today's shopping from lasting preferences. “I want rice” is a request for the current shop. “I buy rice every week” may be a useful long-term memory.
+- Ask instead of guessing. If Reggie does not have the information it needs, it should ask the customer rather than invent an address or claim an order has been placed.
 
 ## How it works
 
@@ -129,31 +100,31 @@ The memory service only allows so many writes a minute, so Reggie sends everythi
 together instead of one request per fact. That keeps a normal conversation well inside the limit
 without slowing anyone down.
 
-Two things are worth saying plainly. **The service accepting a write is not the same as Walrus
-finishing it**; one is fast, the other is not, and they are tracked separately. And the list you see
+Two things are worth saying plainly. The service accepting a write is not the same as Walrus
+finishing it; one is fast, the other is not, and they are tracked separately. And the list you see
 in the app is a local copy, not the original — the original is the Walrus blob.
 
 ## Proof of writes on Walrus mainnet
 
 The numbers below were read from the running database at the time of writing.
 
-| Measure | Value |
-| --- | --- |
+| Measure                | Value  |
+| ---------------------- | ------ |
 | Confirmed Walrus blobs | **32** |
-| Active memories | 41 |
-| Accounts with memory | 8 |
-| Turns recorded | 154 |
+| Active memories        | 41     |
+| Accounts with memory   | 8      |
+| Turns recorded         | 154    |
 
 The writes are tied to a real account on chain:
 
-| Thing | Value |
-| --- | --- |
-| Package | `0xe7c16fbea0560e7057e2bf7422feaa4fb313749fc69c9e9092fac7a33b81d7f5` |
-| Memory account | `0x33353522b191b9215fd57b12c14052efc77227ae995147417c3a47fda8671bb4` |
-| Account type | `0xe7c16f...d7f5::account::MemWalAccount` |
-| Account version | `970575008` |
-| Account digest | `3GahxHvCdpTvvmpqVSKTCFDv45bXB462Vhds3jwcq3e8` |
-| Network | Sui / Walrus **mainnet** |
+| Thing           | Value                                                                |
+| --------------- | -------------------------------------------------------------------- |
+| Package         | `0xe7c16fbea0560e7057e2bf7422feaa4fb313749fc69c9e9092fac7a33b81d7f5` |
+| Memory account  | `0x33353522b191b9215fd57b12c14052efc77227ae995147417c3a47fda8671bb4` |
+| Account type    | `0xe7c16f...d7f5::account::MemWalAccount`                            |
+| Account version | `970575008`                                                          |
+| Account digest  | `3GahxHvCdpTvvmpqVSKTCFDv45bXB462Vhds3jwcq3e8`                       |
+| Network         | Sui / Walrus **mainnet**                                             |
 
 The package and the account were read back from Sui itself, not copied out of a settings file:
 
@@ -163,13 +134,13 @@ POST https://graphql.mainnet.sui.io/graphql
     address version digest asMoveObject { contents { type { repr } } } } }
 ```
 
-**Each blob below was written by a real conversation and confirmed afterwards:**
+Each blob below was written by a real conversation and confirmed afterwards:
 
-| Blob id | What was remembered |
-| --- | --- |
-| `EDcYXNL_Kyio7LDyvfzx6R66usfU1v00lfk4v-xQ79o` | Ngozi usually buys a bunch of bananas |
-| `YKfuTtUB8VucjiVNhdOji-HvUpF0dI_dtxmLCnUNonY` | Ngozi has a delivery address in Surulere |
-| `c3Le2vVqrP6RdjNO054133y1lcChkMYuOlHYcYZXyYQ` | The customer lives in Surulere |
+| Blob id                                       | What was remembered                               |
+| --------------------------------------------- | ------------------------------------------------- |
+| `EDcYXNL_Kyio7LDyvfzx6R66usfU1v00lfk4v-xQ79o` | Ngozi usually buys a bunch of bananas             |
+| `YKfuTtUB8VucjiVNhdOji-HvUpF0dI_dtxmLCnUNonY` | Ngozi has a delivery address in Surulere          |
+| `c3Le2vVqrP6RdjNO054133y1lcChkMYuOlHYcYZXyYQ` | The customer lives in Surulere                    |
 | `eXy9hBPJeu22VOeWy7TXSqT2PvHoCpUW9ztrR6zepno` | The customer always buys brown honey beans weekly |
 | `PzUvjHkNvmG19MyW26luWmrJegoecS7sZagsKk2nwRg` | The customer's last delivery included broken eggs |
 
@@ -182,19 +153,19 @@ on a Walrus explorer. Blobs are not Sui objects, so they do not open by id on a 
 
 ## The model
 
-| | |
-| --- | --- |
-| Model | **`qwen/qwen3-30b-a3b-instruct-2507`** |
+|          |                                             |
+| -------- | ------------------------------------------- |
+| Model    | **`qwen/qwen3-30b-a3b-instruct-2507`**      |
 | Provider | OpenRouter (`https://openrouter.ai/api/v1`) |
-| SDK | Vercel AI SDK v7 |
+| SDK      | Vercel AI SDK v7                            |
 | Used for | the reply, and picking out facts afterwards |
-| Set by | `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY` |
+| Set by   | `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY`  |
 
 The provider follows the common OpenAI format on purpose, so Reggie is not tied to one company.
 Changing `LLM_BASE_URL` and `LLM_MODEL` moves the whole app to another provider, or to a model
 running on your own machine.
 
-**One honest caveat.** This model is fast and cheap, but OpenRouter accepts the request for strictly
+One honest caveat. This model is fast and cheap, but OpenRouter accepts the request for strictly
 formatted JSON and then quietly ignores it. So Reggie asks for JSON as ordinary text, reads it,
 checks it is the right shape, and tries once more if it is not. A model that truly honoured
 formatting would let that safety net be removed.
@@ -219,9 +190,9 @@ you does not narrate their own memory.
 
 ## Asking for something is not a preference
 
-**The hardest part is not remembering. It is refusing to remember the wrong thing.** An early
-version stored "I want to buy rice" as a standing preference, which turned a single shopping line
-into a permanent trait.
+The hardest part is not remembering. It is refusing to remember the wrong thing. An early version
+stored "I want to buy rice" as a standing preference, which turned a single shopping line into a
+permanent trait.
 
 The rules now:
 
@@ -259,7 +230,7 @@ stored as "The customer lives in Yaba" is shown as "You live in Yaba".
     memories       one row per fact: area, label, text, blob id, job id, active
 
 The `memories` table is a local record and a trail for checking. The real copy is the Walrus blob.
-**The blob id is the link between the two**, and it stays empty until Walrus confirms the write.
+The blob id is the link between the two, and it stays empty until Walrus confirms the write.
 
 ## Tech stack
 
@@ -270,21 +241,21 @@ The `memories` table is a local record and a trail for checking. The real copy i
 
 ## Running it yourself
 
-1. **Copy the example settings file:**
+1.  Copy the example settings file:
 
         copy .env.example .env.local
 
-2. **Fill in** `SESSION_SECRET` (32 characters or more), `MEMWAL_PRIVATE_KEY`, `MEMWAL_ACCOUNT_ID`,
-   `LLM_API_KEY` and `LLM_MODEL`. Check the Walrus details with:
+2.  Fill in `SESSION_SECRET` (32 characters or more), `MEMWAL_PRIVATE_KEY`, `MEMWAL_ACCOUNT_ID`,
+    `LLM_API_KEY` and `LLM_MODEL`. Check the Walrus details with:
 
-        node scripts/memwal-live-check.mjs
+         node scripts/memwal-live-check.mjs
 
-3. **Install and start:**
+3.  Install and start:
 
         npm install
         npm run dev
 
-4. **Open** http://localhost:3002. The storefront is at http://localhost:3002/store.
+4.  Open http://localhost:3002.
 
 The database file and its tables are created automatically the first time the app is used.
 
