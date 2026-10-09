@@ -17,7 +17,7 @@ export function RecallChip({ count }: { count: number }) {
     >
       <Sparkles className='size-3.5 text-leaf' strokeWidth={1.9} />
       <span>
-        remembered {count} {count === 1 ? 'thing' : 'things'}
+        recalled {count} {count === 1 ? 'detail' : 'details'} from your memory
       </span>
     </motion.p>
   )
