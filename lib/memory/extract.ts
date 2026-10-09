@@ -1,8 +1,8 @@
-﻿import { generateText } from 'ai'
+import { generateText } from 'ai'
 import { z } from 'zod'
 import { memwal, personalNamespace, sharedNamespace } from '@/lib/memwal'
 import { languageModel } from '@/lib/llm'
-import { confirmMemoryBlob, recordMemory } from '@/lib/db/repo'
+import { confirmMemoryBlob, pendingBlobJobs, recordMemory } from '@/lib/db/repo'
 import { MEMORY_TAGS, formatFact, looksPersonal } from './taxonomy'
 
 /**
@@ -219,5 +219,32 @@ async function confirmBlobs(jobIds: string[]): Promise<void> {
 
     if (pending.size === 0) return
     await new Promise((resolve) => setTimeout(resolve, 5000))
+  }
+}
+
+/**
+ * Runs the confirmation check on demand instead of in the background.
+ *
+ * A serverless function is frozen as soon as its response is sent, so the
+ * fire-and-forget poll above cannot finish there and blob ids would never be
+ * attached. Calling this from a route that is already serving a request gives
+ * the check a live process to run in.
+ */
+export async function confirmPendingBlobs(userId: string): Promise<number> {
+  try {
+    const jobIds = await pendingBlobJobs(userId)
+    if (jobIds.length === 0) return 0
+
+    const status = await memwal().getRememberBulkStatus(jobIds)
+    let confirmed = 0
+    for (const item of status.results) {
+      if (item.status === 'done' && item.blob_id) {
+        await confirmMemoryBlob(item.job_id, item.blob_id)
+        confirmed += 1
+      }
+    }
+    return confirmed
+  } catch {
+    return 0
   }
 }

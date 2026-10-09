@@ -234,3 +234,19 @@ export async function confirmMemoryBlob(jobId: string, blobId: string): Promise<
     .set({ blobId })
     .where(eq(tables.memories.jobId, jobId))
 }
+
+/**
+ * Job ids for this customer whose Walrus blob has not been confirmed yet.
+ * Used to catch up confirmation from a route that is already handling a
+ * request, because a serverless function is frozen once its response is sent.
+ */
+export async function pendingBlobJobs(userId: string): Promise<string[]> {
+  await ensureDb()
+  const rows = await database()
+    .select()
+    .from(tables.memories)
+    .where(eq(tables.memories.userId, userId))
+  return rows
+    .filter((row) => row.jobId && !row.blobId)
+    .map((row) => row.jobId as string)
+}
