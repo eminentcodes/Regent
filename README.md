@@ -210,9 +210,8 @@ The rules now:
     /            landing page, and the Walrus Memory explainer
     /chat        the assistant, with "Your usual" beside it
     /store       the Regency Stores storefront
-    /memory      what Reggie remembers, grouped by tag, with Forget on each item
+    /memory      what Reggie remembers, grouped by tag, each with a Walrus link
     /shared      what the shop has learned across customers
-    /admin       memory counts per shopper
     /login       email and password
     /register    email and password
 
@@ -294,11 +293,9 @@ quote real prices and policies. This is shop information, not customer memory.
 
 - **Picking out facts depends on the network.** OpenRouter timeouts are retried, but a turn whose
   fact-picking finally fails loses that memory with no warning, and it is not queued to try again.
-- **Forget is local only.** Walrus can only be added to, never erased, so the blob stays on mainnet
-  forever. Forget marks the record inactive and hides it in the app. It is not a deletion, and the
-  app should keep saying so.
-- **A forgotten memory can still be found again.** Looking up memory goes straight to Walrus and
-  does not yet skip ids that were forgotten here. This is a real gap and the next thing to fix.
+- **Memory can be added to, never erased.** Walrus is append-only, so once a fact is written the
+  blob stays on mainnet. The app does not offer a delete button for that reason: the honest thing
+  to show a customer is that the write is permanent.
 - **Matching uses two fixed scores.** Adding memory to the reply uses a score of 0.80. The
   "remembered" note uses a stricter 0.70, because a real match scores 0.38 to 0.69 while an
   unrelated one scores 0.71 and up — at 0.80 the note appeared on messages like "hello". Both are
