@@ -170,7 +170,7 @@ export function Storefront({ products, categories, initialCategory = 'all' }: {
             <div className='shopping-list-total'><span>Estimated total</span><strong>{formatNaira(list.total)}</strong></div>
             <p className='shopping-list-note'>Reggie will confirm availability, delivery, and the final amount. Your list isn’t an order yet.</p>
             {storageUnavailable ? <p role='status' className='text-sm text-warn'>Your browser cannot save this list between visits. You can still send it to Reggie now.</p> : null}
-            <a href={chatHref(listMessage)} className={buttonStyles('primary', 'lg', 'w-full')} onClick={() => setListOpen(false)}>Chat about this list <ArrowUpRight className='size-4' aria-hidden='true' /></a>
+            <a href={chatHref(listMessage, { send: true })} className={buttonStyles('primary', 'lg', 'w-full')}>Chat about this list <ArrowUpRight className='size-4' aria-hidden='true' /></a>
             <button type='button' className='shopping-list-continue' onClick={() => setListOpen(false)}>Keep browsing</button>
           </> : <div className='store-empty list-empty'><ShoppingBasket className='size-10' strokeWidth={1.3} aria-hidden='true' /><h3>A little room for your favourites.</h3><p>Add something from the shelves, then let Reggie help you put your shop together.</p><button type='button' className={buttonStyles('primary', 'md')} onClick={() => setListOpen(false)}>Explore the shelves <ArrowRight className='size-4' /></button></div>}
         </div>
@@ -181,7 +181,7 @@ export function Storefront({ products, categories, initialCategory = 'all' }: {
           <div className='product-detail-photo'><Image src={selected.image} alt={selected.imageAlt} fill sizes='440px' /></div>
           <div className='product-detail-copy'><p className='product-category'>{categories.find(({ id }) => id === selected.category)?.label}</p><h3>{selected.title}</h3><p>{selected.size}</p><strong className='product-detail-price'>{formatNaira(selected.price)}</strong><p className='shopping-list-note'>Catalogue price. Ask Reggie to confirm current availability. Photo is illustrative.</p>
             <button type='button' className={buttonStyles('primary', 'md', 'w-full')} disabled={(list.quantities[selected.id] ?? 0) >= 99} onClick={() => { changeQuantity(selected, 1); setSelected(null) }}><Plus className='size-4' aria-hidden='true' />{list.quantities[selected.id] ? 'Add another to your list' : 'Add to your list'}</button>
-            <a href={chatHref('Hi Reggie, can you tell me about ' + selected.name + ' and confirm if it is available?')} className='site-text-link' onClick={() => setSelected(null)}><MessageCircle className='size-4' aria-hidden='true' />Ask about this item <ArrowUpRight className='size-4' aria-hidden='true' /></a>
+            <a href={chatHref('Hi Reggie, can you tell me about ' + selected.name + ' and confirm if it is available?')} className='site-text-link'><MessageCircle className='size-4' aria-hidden='true' />Ask about this item <ArrowUpRight className='size-4' aria-hidden='true' /></a>
           </div>
         </div> : null}
       </Modal>

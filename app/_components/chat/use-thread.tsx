@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import type { RecallStatus } from '@/app/_lib/types'
+import { useSession } from '../session-provider'
 
 export type RecallNote = { count: number; status: RecallStatus }
 
@@ -18,6 +19,7 @@ function lastUserText(messages: UIMessage[]): string {
 }
 
 export function useThread() {
+  const session = useSession()
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [recallNotes, setRecallNotes] = useState<RecallNote[]>([])
   const [memoryStatus, setMemoryStatus] = useState<RecallStatus>('ok')
@@ -37,6 +39,9 @@ export function useThread() {
         },
         fetch: async (input, init) => {
           const response = await fetch(input, init)
+          // A late 401 means the session lapsed: re-check it so the customer
+          // sees the sign-in prompt instead of a dead error.
+          if (response.status === 401) void session.reload()
           const nextId = response.headers.get('X-Conversation-Id')
           if (nextId) {
             requestConversationId = nextId

@@ -103,7 +103,11 @@
 .rail-link.is-active { background: var(--leaf); color: var(--on-leaf); box-shadow: 0 4px 12px -6px var(--leaf); }
 .rail-label { position: absolute; left: 53px; pointer-events: none; opacity: 0; transform: translateX(-4px); display: flex; gap: 6px; align-items: center; white-space: nowrap; font-size: 12px; padding: 7px 10px; border-radius: 9px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); box-shadow: var(--elev-pop); transition: opacity .15s, transform .15s; z-index: 20; }
 .rail-link:hover .rail-label, .rail-link:focus-visible .rail-label { opacity: 1; transform: translateX(0); }
-.context-sidebar { width: 282px; flex-shrink: 0; min-height: 0; padding: 29px 23px 22px 13px; }
+.context-sidebar { position: relative; width: 282px; flex-shrink: 0; min-height: 0; padding: 29px 23px 22px 13px; transition: width .22s ease, padding .22s ease; }
+.context-sidebar.is-collapsed { width: 58px; padding-right: 12px; padding-left: 12px; }
+.sidebar-toggle { position: absolute; top: 22px; right: 11px; z-index: 6; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; border: 1px solid var(--line-strong); color: var(--ink-muted); background: color-mix(in srgb, var(--paper) 72%, transparent); transition: color .15s ease, background .15s ease; }
+.sidebar-toggle:hover { color: var(--ink); background: var(--paper); }
+.sidebar-toggle:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
 .app-content { min-width: 0; flex: 1; margin: 10px 10px 10px 0; border-radius: 24px; background: var(--chat-surface); }
 .app-content-fill { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .page-topbar { display: flex; height: 76px; align-items: center; justify-content: space-between; gap: 16px; padding: 0 34px; border-bottom: 1px solid var(--line); }
@@ -149,7 +153,7 @@
 
 /* Context / real account memory */
 .usual-panel { height: 100%; min-height: 0; display: flex; flex-direction: column; }
-.usual-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 24px; }
+.usual-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 24px; padding-right: 42px; }
 .usual-heading h2 { font-size: 22px; letter-spacing: -.045em; font-weight: 500; }
 .usual-heading p { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
 .usual-scroll { flex: 1; min-height: 0; overflow: auto; }

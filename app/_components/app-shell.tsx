@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState, useSyncExternalStore, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ArrowUpRight, Brain, LogOut, MessageCircle, Store, Users } from 'lucide-react'
+import { ArrowUpRight, Brain, ChevronLeft, ChevronRight, LogOut, MessageCircle, Store, Users } from 'lucide-react'
 import { RegentMark, UserAvatar } from './brand'
 import { useSession } from './session-provider'
 import { ThemeToggle } from './theme-toggle'
@@ -11,6 +11,35 @@ import { cx } from './ui/primitives'
 import { STORE_LOCATION } from '@/app/_lib/store'
 import { STORE_URL } from '@/config/sites'
 
+const SIDEBAR_KEY = 'regent:sidebar'
+const SIDEBAR_EVENT = 'regent-sidebar'
+let sidebarFallback = true
+
+function subscribeSidebar(callback: () => void) {
+  const onStorage = (event: StorageEvent) => { if (event.key === SIDEBAR_KEY || event.key === null) callback() }
+  window.addEventListener('storage', onStorage)
+  window.addEventListener(SIDEBAR_EVENT, callback)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    window.removeEventListener(SIDEBAR_EVENT, callback)
+  }
+}
+
+function sidebarSnapshot(): boolean {
+  try {
+    const value = localStorage.getItem(SIDEBAR_KEY)
+    return value === null ? sidebarFallback : value !== '0'
+  } catch { return sidebarFallback }
+}
+
+function toggleSidebar() {
+  const next = !sidebarSnapshot()
+  sidebarFallback = next
+  try {
+    localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
+  } catch { /* The toggle still works for this visit. */ }
+  window.dispatchEvent(new Event(SIDEBAR_EVENT))
+}
 const LINKS = [
   { href: '/chat', label: 'Chat', icon: MessageCircle },
   { href: '/memory', label: 'Memory', icon: Brain },
@@ -75,12 +104,25 @@ function NavigationRail() {
 export function AppShell({ children, fill = false, sidebar }: { children: ReactNode; fill?: boolean; sidebar?: ReactNode }) {
   const pathname = usePathname()
   const label = LINKS.find((link) => link.href === pathname)?.label ?? 'Your account'
+  const sidebarOpen = useSyncExternalStore(subscribeSidebar, sidebarSnapshot, () => true)
+
   return (
     <div className='app-backdrop'>
       <a href='#main-content' className='skip-link'>Skip to content</a>
       <div className={cx('app-frame', fill && 'app-frame-fill')}>
         <NavigationRail />
-        {sidebar ? <aside className='context-sidebar' aria-label='Your usual'>{sidebar}</aside> : null}
+        {sidebar ? (
+          <aside className={cx('context-sidebar', !sidebarOpen && 'is-collapsed')} aria-label='Your usual'>
+            <button type='button' className='sidebar-toggle' onClick={toggleSidebar}
+              aria-expanded={sidebarOpen} aria-label={sidebarOpen ? 'Collapse this panel' : 'Expand this panel'}
+              title={sidebarOpen ? 'Collapse panel' : 'Expand panel'}>
+              {sidebarOpen
+                ? <ChevronLeft className='size-4' aria-hidden='true' />
+                : <ChevronRight className='size-4' aria-hidden='true' />}
+            </button>
+            {sidebarOpen ? sidebar : null}
+          </aside>
+        ) : null}
         <div className={cx('app-content', fill && 'app-content-fill')}>
           {!fill ? (
             <header className='page-topbar'>

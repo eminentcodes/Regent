@@ -25,7 +25,19 @@ function storeTarget(name, fallback) {
   return siteOrigin(name, value);
 }
 
-const regentUrl = siteOrigin('NEXT_PUBLIC_REGENT_URL', 'http://localhost:3002');
+/**
+ * When NEXT_PUBLIC_REGENT_URL is not set, fall back to the deployment's own
+ * host instead of localhost so links keep working on Vercel.
+ */
+function defaultRegentUrl() {
+  const host =
+    (process.env.VERCEL_ENV === 'production' ? process.env.VERCEL_PROJECT_PRODUCTION_URL : process.env.VERCEL_URL) ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL;
+  return host ? 'https://' + host.replace(/^https?:\/\//, '') : 'http://localhost:3002';
+}
+
+const regentUrl = siteOrigin('NEXT_PUBLIC_REGENT_URL', defaultRegentUrl());
 const storeUrl = storeTarget('NEXT_PUBLIC_STORE_URL', '/store');
 if (storeUrl.startsWith('http') && storeUrl === regentUrl) {
   throw new Error('Regent and Regency Stores need different site origins.');

@@ -32,16 +32,16 @@ function readPending(): string | null {
   try { return sessionStorage.getItem(PENDING_KEY) } catch { return null }
 }
 
-export function ChatScreen({ initialDraft = '' }: { initialDraft?: string }) {
+export function ChatScreen({ initialDraft = '', autoSend = false }: { initialDraft?: string; autoSend?: boolean }) {
   const { user } = useSession()
   // Account changes unmount the private thread, including any active stream.
-  return <ChatWorkspace key={user?.id ?? 'guest'} initialDraft={initialDraft} />
+  return <ChatWorkspace key={user?.id ?? 'guest'} initialDraft={initialDraft} autoSend={autoSend} />
 }
 
-function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
+function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoSend: boolean }) {
   const session = useSession()
   const thread = useThread()
-  const [draft, setDraft] = useState(initialDraft)
+  const [draft, setDraft] = useState(autoSend ? '' : initialDraft)
   const [held, setHeld] = useState<string | null>(null)
   const [gateOpen, setGateOpen] = useState(false)
   const [focusToken, setFocusToken] = useState(0)
@@ -50,7 +50,6 @@ function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const resumedRef = useRef(false)
   const busy = thread.status === 'submitted' || thread.status === 'streaming'
-  const refreshToken = Math.floor((thread.messages.length - (busy ? 1 : 0)) / 2)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -60,18 +59,21 @@ function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
   useEffect(() => {
     if (resumedRef.current || session.status === 'loading') return
     resumedRef.current = true
-    const stored = readPending()
-    if (!stored) return
+    // A shopping list handed over from the store goes straight to Reggie,
+    // otherwise the message left waiting by the sign-in gate is sent.
+    const pending = autoSend && initialDraft ? initialDraft : readPending()
+    if (!pending) return
     if (session.status === 'user') {
       rememberPending(null)
-      void thread.sendMessage({ text: stored })
+      void thread.sendMessage({ text: pending })
       return
     }
+    rememberPending(pending)
     // Browser storage must be restored after hydration, never during SSR.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHeld(stored)
+    setHeld(pending)
     setGateOpen(true)
-  }, [session.status, thread])
+  }, [session.status, thread, autoSend, initialDraft])
 
   async function handleSubmit(raw: string) {
     const value = raw.trim()
@@ -82,13 +84,11 @@ function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
       rememberPending(value)
       setHeld(value)
       setGateOpen(true)
-      setDraft('')
       return
     }
     rememberPending(null)
     setHeld(null)
     setGateOpen(false)
-    setDraft('')
     await thread.sendMessage({ text: value })
   }
 
@@ -99,7 +99,6 @@ function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
     thread.clearError()
     setHeld(null)
     setGateOpen(false)
-    setDraft('')
     setFocusToken((value) => value + 1)
   }
   function selectPrompt(message: string) {
@@ -123,7 +122,7 @@ function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
   const empty = thread.messages.length === 0 && !held && !gateOpen
 
   return (
-    <AppShell fill sidebar={<YourUsualPanel refreshToken={refreshToken} />}>
+    <AppShell fill sidebar={<YourUsualPanel />}>
       <header className='chat-header'>
         <span className='grid size-8 place-items-center rounded-full bg-lavender-tint'><Sparkles className='size-4' strokeWidth={1.6} /></span>
         <div>
@@ -173,7 +172,7 @@ function ChatWorkspace({ initialDraft }: { initialDraft: string }) {
       </div>
 
       <Modal open={sheetOpen} onClose={() => setSheetOpen(false)} title='Your usual' sheet>
-        {sheetOpen ? <YourUsualPanel refreshToken={refreshToken} /> : null}
+        {sheetOpen ? <YourUsualPanel /> : null}
       </Modal>
     </AppShell>
   )
@@ -203,4 +202,3 @@ function EmptyThread({ onPrompt }: { onPrompt: (message: string) => void }) {
     </div>
   )
 }
-

@@ -1,15 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CircleCheck, Trash } from 'lucide-react'
+import { Trash } from 'lucide-react'
 import { AppShell, PageBody } from '@/app/_components/app-shell'
 import { NeedsSignIn } from '@/app/_components/gates'
 import { useSession } from '@/app/_components/session-provider'
-import { Alert, Button, Card, Chip, EmptyState, Skeleton } from '@/app/_components/ui/primitives'
+import { Alert, Card, Chip, EmptyState, Skeleton } from '@/app/_components/ui/primitives'
 import { api, errorMessage } from '@/app/_lib/api'
 import { formatDate, secondPerson } from '@/app/_lib/format'
 import { TAG_META, TAG_ORDER } from '@/app/_lib/tags'
-import type { Memory, MemoryList } from '@/app/_lib/types'
+import type { MemoryList } from '@/app/_lib/types'
 
 export default function MemoryPage() {
   const { user, status } = useSession()
@@ -22,9 +22,6 @@ function MemoryContent() {
   const [data, setData] = useState<MemoryList | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
-  const [confirmId, setConfirmId] = useState<string | null>(null)
-  const [pendingId, setPendingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (session.status === 'loading') return
@@ -52,34 +49,6 @@ function MemoryContent() {
     }
   }, [session.status, session.user?.id])
 
-  async function forget(memory: Memory) {
-    setPendingId(memory.id)
-    setError(null)
-
-    try {
-      await api('/api/memory/' + memory.id, { method: 'DELETE' })
-
-      setData((previous) => {
-        if (!previous) return previous
-        return {
-          memories: previous.memories.filter((item) => item.id !== memory.id),
-          counts: {
-            ...previous.counts,
-            personal: Math.max(0, previous.counts.personal - 1),
-            total: Math.max(0, previous.counts.total - 1),
-          },
-        }
-      })
-
-      setNotice('Forgotten. Reggie will not use that again.')
-      await session.reload()
-    } catch (caught) {
-      setError(errorMessage(caught))
-    } finally {
-      setPendingId(null)
-      setConfirmId(null)
-    }
-  }
 
   const groups = TAG_ORDER.map((tag) => ({
     tag,
@@ -110,11 +79,6 @@ function MemoryContent() {
         </div>
 
         <div className='mt-7 flex flex-col gap-6'>
-          {notice ? (
-            <Alert tone='neutral' icon={<CircleCheck className='size-4 text-leaf' strokeWidth={2} />}>
-              {notice}
-            </Alert>
-          ) : null}
 
           {signedOut ? (
             <NeedsSignIn what='your memory' next='/memory' />
@@ -157,36 +121,6 @@ function MemoryContent() {
                         <p className='min-w-0 flex-1 text-[0.88rem] leading-relaxed text-ink'>
                           {secondPerson(memory.text)}
                         </p>
-                        <div className='flex shrink-0 items-center gap-1'>
-                          <span className='hidden pr-1 text-[0.74rem] text-ink-faint sm:inline'>
-                            {formatDate(memory.createdAt)}
-                          </span>
-                          {confirmId === memory.id ? (
-                            <>
-                              <Button
-                                variant='danger'
-                                size='sm'
-                                loading={pendingId === memory.id}
-                                onClick={() => void forget(memory)}
-                              >
-                                Forget
-                              </Button>
-                              <Button variant='quiet' size='sm' onClick={() => setConfirmId(null)}>
-                                Keep
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant='quiet'
-                              size='sm'
-                              onClick={() => setConfirmId(memory.id)}
-                              aria-label={'Forget: ' + secondPerson(memory.text)}
-                            >
-                              <Trash className='size-4' strokeWidth={1.8} />
-                              <span className='hidden sm:inline'>Forget</span>
-                            </Button>
-                          )}
-                        </div>
                       </li>
                     ))}
                   </ul>
@@ -195,10 +129,6 @@ function MemoryContent() {
             })
           )}
 
-          <p className='max-w-[70ch] text-[0.78rem] leading-relaxed text-ink-faint'>
-            Forgetting stops Reggie from using a memory in future conversations. The original
-            record remains in the underlying memory storage.
-          </p>
         </div>
       </PageBody>
     </AppShell>
