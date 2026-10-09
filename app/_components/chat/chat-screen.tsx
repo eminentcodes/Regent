@@ -169,7 +169,7 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
   const empty = thread.messages.length === 0 && !held && !gateOpen
 
   return (
-    <AppShell fill sidebar={<YourUsualPanel refreshToken={refreshToken} />}>
+    <AppShell fill sidebar={<YourUsualPanel refreshToken={refreshToken} conversationId={thread.conversationId} />}>
       <header className='chat-header'>
         <span className='grid size-8 place-items-center rounded-full bg-lavender-tint'><Sparkles className='size-4' strokeWidth={1.6} /></span>
         <div>
@@ -219,7 +219,7 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
       </div>
 
       <Modal open={sheetOpen} onClose={() => setSheetOpen(false)} title='Your usual' sheet>
-        {sheetOpen ? <YourUsualPanel refreshToken={refreshToken} /> : null}
+        {sheetOpen ? <YourUsualPanel refreshToken={refreshToken} conversationId={thread.conversationId} /> : null}
       </Modal>
     </AppShell>
   )

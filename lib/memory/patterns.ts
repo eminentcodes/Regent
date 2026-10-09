@@ -26,6 +26,12 @@ const RULES: { tag: MemoryTag; pattern: RegExp }[] = [
     pattern: /\b(i live (in|at|on)|i stay (in|at)|i'?m based (in|at)|i am based (in|at)|my address is|my house is|my area is|my name is|call me|my (wife|husband|son|daughter|children|kids|family|mum|mom|dad|brother|sister)|there are \w+ of us)\b/i,
   },
   {
+    // An order is the thing a customer is most likely to ask about later, so it
+    // is remembered rather than treated as noise.
+    tag: 'event',
+    pattern: /\b(i ordered|i want to order|i'?d like to order|i want|i need|i would like|add|get me|send me|bring me|bring|pick up|collect|i'?m ordering|please deliver|deliver (it|them) to|drop (it|them) off)\b/i,
+  },
+  {
     tag: 'pref',
     pattern: /\b(i always|i usually|i normally|i only buy|my usual|my regular|same as always|i prefer|i like|i love|my favou?rite|every week|every month|i never|i do not eat|i don'?t eat|i can'?t eat|i cannot eat|allergic|vegetarian|vegan|dairy[- ]free|gluten[- ]free|no pork|no beef|i do not want|i don'?t want|do not send|don'?t send|never send)\b/i,
   },
@@ -34,8 +40,8 @@ const RULES: { tag: MemoryTag; pattern: RegExp }[] = [
 const MIN_LENGTH = 8
 const MAX_LENGTH = 400
 
-/** A one-off order is not a fact about the customer. */
-const ORDER_LINE = /\b(i want to buy|i'?d like to buy|add |get me|please send|send me|how much is|do you have|is it available)\b/i
+/** A question is not a fact about the customer. An order is. */
+const QUESTION_ONLY = /\b(how much|do you (have|sell|stock)|is it available|what time|opening hours|delivery fee)\b/i
 /** ...unless they said it lasts, or asked for it to be kept. */
 const STANDING = /\b(always|usually|normally|every week|every month|my usual|my regular|prefer|allergic|vegetarian|vegan|i never|remember|save)\b/i
 
@@ -53,7 +59,7 @@ function firstSentence(message: string): string {
 export function fallbackFact(message: string): { tag: MemoryTag; text: string } | null {
   const value = firstSentence(message)
   if (value.length < MIN_LENGTH) return null
-  if (ORDER_LINE.test(value) && !STANDING.test(value)) return null
+  if (QUESTION_ONLY.test(value) && !STANDING.test(value)) return null
 
   const rule = RULES.find((candidate) => candidate.pattern.test(value))
   if (!rule) return null

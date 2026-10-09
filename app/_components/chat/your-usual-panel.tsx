@@ -3,21 +3,29 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, Brain, LockKeyhole, MapPin, ShoppingBasket } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Brain, Database, LockKeyhole, MapPin, ShoppingBasket, ShoppingCart } from 'lucide-react'
 import { api, errorMessage } from '@/app/_lib/api'
 import { secondPerson } from '@/app/_lib/format'
+import { formatNaira } from '@/app/_lib/store'
 import type { MemoryList } from '@/app/_lib/types'
+import type { Basket } from '@/lib/basket'
 import { TAG_META } from '@/app/_lib/tags'
 import { useSession } from '../session-provider'
 import { Alert, Skeleton, buttonStyles } from '../ui/primitives'
 import { STORE_LOCATION } from '@/app/_lib/store'
 import { STORE_URL } from '@/config/sites'
 
-export function YourUsualPanel({ refreshToken = 0 }: { refreshToken?: number }) {
+export function YourUsualPanel({ refreshToken = 0, conversationId = null }: {
+  refreshToken?: number
+  conversationId?: string | null
+}) {
   const { status, user } = useSession()
   const [result, setResult] = useState<{ key: string; data?: MemoryList; error?: string } | null>(null)
+  const [basket, setBasket] = useState<{ key: string; data?: Basket } | null>(null)
   const [retry, setRetry] = useState(0)
   const key = user ? user.id + ':' + refreshToken + ':' + retry : ''
+  const basketKey = user && conversationId ? user.id + ':' + conversationId + ':' + refreshToken + ':' + retry : ''
+
   useEffect(() => {
     if (!key) return
     let cancelled = false
@@ -38,29 +46,68 @@ export function YourUsualPanel({ refreshToken = 0 }: { refreshToken?: number }) 
       for (const timer of timers) clearTimeout(timer)
     }
   }, [key])
+
+  useEffect(() => {
+    if (!basketKey) return
+    let cancelled = false
+
+    function load() {
+      api<Basket>('/api/basket?conversationId=' + encodeURIComponent(conversationId as string))
+        .then((data) => { if (!cancelled) setBasket({ key: basketKey, data }) })
+        .catch(() => { /* an empty basket is the honest fallback */ })
+    }
+
+    load()
+    const timers = [2500, 8000, 18000].map((delay) => setTimeout(load, delay))
+
+    return () => {
+      cancelled = true
+      for (const timer of timers) clearTimeout(timer)
+    }
+  }, [basketKey, conversationId])
+
   const current = result?.key === key ? result : null
   const data = current?.data
   // Everything the assistant has written to Walrus about this customer lands
   // here, so shopping-list notes show up while the conversation happens.
   const useful = (data?.memories ?? []).filter((memory) => memory.active)
   const loading = status === 'loading' || (status === 'user' && !current)
+  const cart = basket?.key === basketKey ? basket.data : undefined
 
   return (
     <div className='usual-panel'>
       <header className='usual-heading'>
-        <div><h2>Your usual</h2><p>The little things that make it yours.</p></div>
+        <div><h2>Your basket</h2><p>What this shop is holding for you.</p></div>
         <ShoppingBasket className='size-5 text-ink-muted' strokeWidth={1.5} />
       </header>
       <div className='usual-scroll scroll-slim'>
-        <div className='usual-feature'>
-          <div className='usual-feature-photo'>
-            <Image src='/images/grocery-bag.jpg' alt='A selection of everyday groceries and fresh produce' fill sizes='(max-width: 767px) 400px, 250px' preload />
-          </div>
-          <div className='usual-feature-copy'>
-            <h3>Your favourites.<br />Already remembered.</h3>
-            <p>Less explaining. More of what you love, every time you drop by.</p>
-          </div>
-        </div>
+        <section className='basket-card' aria-label='Your basket'>
+          {cart && cart.lines.length ? (
+            <>
+              <ul className='basket-items'>
+                {cart.lines.map((line) => (
+                  <li key={line.id}>
+                    <span className='basket-quantity'>{line.quantity}</span>
+                    <div><p>{line.title}</p><small>{line.size || 'each'} · {formatNaira(line.unitPrice)}</small></div>
+                    <strong>{formatNaira(line.total)}</strong>
+                  </li>
+                ))}
+              </ul>
+              <div className='basket-total'><span>Basket total</span><strong>{formatNaira(cart.total)}</strong></div>
+              <p className='basket-note'>
+                {cart.fromMemory
+                  ? 'Part of this is your usual, recalled from your Walrus memory.'
+                  : 'Priced from the Regency Stores catalogue. Reggie confirms the final amount.'}
+              </p>
+            </>
+          ) : (
+            <div className='basket-empty'>
+              <ShoppingCart className='mb-3 size-5 text-ink-muted' strokeWidth={1.5} />
+              <h3>{conversationId ? 'Nothing in your basket yet.' : 'Start a chat to fill your basket.'}</h3>
+              <p>Say what you need, like &ldquo;I need rice and beans&rdquo;, or ask for your usual and Reggie will bring it back from your memory.</p>
+            </div>
+          )}
+        </section>
 
         <div className='usual-section-label'><Brain className='size-3.5' strokeWidth={1.7} /> Remembered for you {data ? <span className='ml-auto'>{useful.length}</span> : null}</div>
         {loading ? (
@@ -90,6 +137,18 @@ export function YourUsualPanel({ refreshToken = 0 }: { refreshToken?: number }) 
             {useful.length > 6 ? <li className='px-2 pt-1 text-xs text-ink-muted'>And {useful.length - 6} more in your memory.</li> : null}
           </ul>
         )}
+
+        <p className='usual-written'><Database className='size-3.5 text-leaf' strokeWidth={1.8} /> Written to Walrus Memory on Sui mainnet</p>
+
+        <div className='usual-feature'>
+          <div className='usual-feature-photo'>
+            <Image src='/images/grocery-bag.jpg' alt='A selection of everyday groceries and fresh produce' fill sizes='(max-width: 767px) 400px, 250px' />
+          </div>
+          <div className='usual-feature-copy'>
+            <h3>Your favourites.<br />Already remembered.</h3>
+            <p>Less explaining. More of what you love, every time you drop by.</p>
+          </div>
+        </div>
       </div>
       <footer className='usual-footer'>
         <Link href='/memory' className='transition-colors hover:text-leaf'>Explore your memory <ArrowRight className='size-4' strokeWidth={1.6} /></Link>
