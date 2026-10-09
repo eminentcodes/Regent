@@ -1,4 +1,4 @@
-﻿import {
+import {
   memwal,
   personalNamespace,
   sharedNamespace,
@@ -106,6 +106,13 @@ async function recallTier(
   }
 }
 
+/**
+ * The standing facts. A new session must open knowing who is at the counter, so
+ * this is recalled on every turn no matter what the customer's message says.
+ */
+const PROFILE_QUERY =
+  "customer profile: their name, the area they live in, who they shop for, their usual order, standing likes and dislikes, allergies, delivery details, anything still unresolved"
+
 export async function recallForTurn(
   groupId: string,
   userId: string,
@@ -116,17 +123,28 @@ export async function recallForTurn(
   // cold relayer, and a slow catalogue lookup must never take the customer's
   // own memory down with it.
   const failures: string[] = []
+  const personalNamespaceId = personalNamespace(groupId, userId)
 
-  const [knowledge, personal, shared] = await Promise.all([
+  const [knowledge, matched, standing, shared] = await Promise.all([
     recallTier(knowledgeNamespace(groupId), query, "knowledge", limit, failures),
-    recallTier(personalNamespace(groupId, userId), query, "personal", limit, failures),
+    recallTier(personalNamespaceId, query, "personal", limit, failures),
+    recallTier(personalNamespaceId, PROFILE_QUERY, "personal", limit, failures),
     recallTier(sharedNamespace(groupId), query, "shared", limit, failures),
   ])
 
+  // What matches the question comes first; the standing facts follow, and are
+  // marked as clearly relevant so the interface reports them as recalled.
+  const personal: RecalledMemory[] = [...matched]
+  for (const memory of standing) {
+    if (personal.some((existing) => existing.text === memory.text)) continue
+    personal.push({ ...memory, distance: Math.min(memory.distance, 0.6) })
+  }
+
+  const failedTiers = new Set(failures.map((failure) => failure.split(":")[0]))
   const count = knowledge.length + personal.length + shared.length
 
   return {
-    status: failures.length === 3 ? "degraded" : "ok",
+    status: failedTiers.size >= 3 ? "degraded" : "ok",
     knowledge,
     personal,
     shared,
