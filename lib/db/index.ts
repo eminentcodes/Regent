@@ -1,4 +1,4 @@
-﻿import { createClient, type Client } from "@libsql/client"
+import { createClient, type Client } from "@libsql/client"
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql"
 import { env } from "@/lib/env"
 import * as schema from "./schema"
@@ -9,7 +9,12 @@ let cachedDb: LibSQLDatabase<typeof schema> | null = null
 export function database(): LibSQLDatabase<typeof schema> {
   if (cachedDb) return cachedDb
 
-  cachedClient = createClient({ url: env().DATABASE_URL })
+  const config = env()
+  // A hosted libsql database (Turso) needs its token; a local file does not.
+  cachedClient = createClient({
+    url: config.DATABASE_URL,
+    authToken: config.DATABASE_AUTH_TOKEN || undefined,
+  })
   cachedDb = drizzle(cachedClient, { schema })
   return cachedDb
 }

@@ -14,9 +14,22 @@ function siteOrigin(name, fallback) {
   return url.origin;
 }
 
+/**
+ * The storefront is a page inside this app at /store, so its link is normally a
+ * path. It only needs an absolute origin when it is deployed as its own site.
+ */
+function storeTarget(name, fallback) {
+  const value = process.env[name] || fallback;
+  if (value.startsWith('//')) throw new Error(`${name} must not be a protocol-relative URL.`);
+  if (value.startsWith('/')) return value.replace(/\/+$/, '') || '/';
+  return siteOrigin(name, value);
+}
+
 const regentUrl = siteOrigin('NEXT_PUBLIC_REGENT_URL', 'http://localhost:3002');
-const storeUrl = siteOrigin('NEXT_PUBLIC_STORE_URL', 'http://localhost:3003');
-if (regentUrl === storeUrl) throw new Error('Regent and Regency Stores need different site origins.');
+const storeUrl = storeTarget('NEXT_PUBLIC_STORE_URL', '/store');
+if (storeUrl.startsWith('http') && storeUrl === regentUrl) {
+  throw new Error('Regent and Regency Stores need different site origins.');
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

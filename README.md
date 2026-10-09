@@ -3,10 +3,10 @@
 **A grocery chat assistant that actually remembers you — because the memory is stored on Walrus.**
 
 Regent is the ordering assistant for **Regency Stores**, a neighbourhood grocery in Yaba, Lagos.
-There is no product page and no checkout, because that is not how this shop's customers buy. The
-chat is the counter. Reggie takes the message, remembers what the customer says, and stores the
-important parts in Walrus Memory on Sui mainnet — so what it knows survives the browser, the phone,
-and whoever happens to be holding the phone that day.
+There is no product page and no checkout, because that is not how this shop's customers actually
+buy. **The chat is the counter.** Reggie takes the message, remembers what the customer says, and
+stores the important parts in Walrus Memory on Sui mainnet — so what it knows survives the browser,
+the phone, and whoever happens to be holding the phone that day.
 
 Built for **Walrus Sessions 8: Chatbots That Remember**.
 
@@ -35,32 +35,32 @@ Built for **Walrus Sessions 8: Chatbots That Remember**.
 
 ## The problem
 
-Regency Stores sells the same basket to the same people, week after week. That repetition is the
-whole business. A grocery in Yaba does not live on one big order; it lives on the customer who
+Regency Stores sells the same basket to the same people, week after week. **That repetition is the
+whole business.** A grocery in Yaba does not live on one big order; it lives on the customer who
 bought 1kg of carrots, a crate of eggs and brown honey beans on Saturday coming back the next
 Saturday to buy it again. Losing that customer is not losing one sale. It is losing the sale that
 was going to repeat every week for a year.
 
-The repeat order is exactly what the shop has no way to hold on to.
+**The repeat order is exactly what the shop has no way to hold on to.**
 
 Orders come in on WhatsApp, so every repeat order starts from nothing. The customer retypes a list
 they have already typed thirty times, or scrolls back through a year of chat to find last week's
-message and copy it. Some give up and simply say "the usual" — and from there it is on whoever is
-holding the phone to know whose usual is whose. During a rush they guess. When that attendant
+message and copy it. Some give up and simply say **"the usual"** — and from there it is on whoever
+is holding the phone to know whose usual is whose. During a rush they guess. When that attendant
 leaves, what they knew leaves with them, and the next person at the phone starts every regular
 customer from scratch.
 
-The damage is quiet, but it adds up:
+**The damage is quiet, but it adds up:**
 
 - The customer ends up doing the shop's remembering for it, every single week.
 - A guessed order is a wrong order — a refund, a wasted trip, and a customer who tries the shop
   down the road next time.
 - The most valuable thing a grocery owns, a clear picture of what each regular buys, sits in one
   person's head, on a phone that gets wiped, or in a notebook nobody can search.
-- "The usual" is the most valuable sentence in the shop, and it is the one thing the shop cannot
-  keep.
+- **"The usual"** is the most valuable sentence in the shop, and it is the one thing the shop
+  cannot keep.
 
-A bot that only answers questions does not fix any of this. It has to remember — and what it
+A bot that only answers questions does not fix any of this. **It has to remember** — and what it
 remembers has to outlast the device, the browser and the staff. Something saved on one phone is not
 memory. It is only a longer session.
 
@@ -129,8 +129,8 @@ The memory service only allows so many writes a minute, so Reggie sends everythi
 together instead of one request per fact. That keeps a normal conversation well inside the limit
 without slowing anyone down.
 
-Two things are worth saying plainly. The service accepting a write is not the same as Walrus
-finishing it; one is fast, the other is not, and they are tracked separately. And the list you see
+Two things are worth saying plainly. **The service accepting a write is not the same as Walrus
+finishing it**; one is fast, the other is not, and they are tracked separately. And the list you see
 in the app is a local copy, not the original — the original is the Walrus blob.
 
 ## Proof of writes on Walrus mainnet
@@ -163,7 +163,7 @@ POST https://graphql.mainnet.sui.io/graphql
     address version digest asMoveObject { contents { type { repr } } } } }
 ```
 
-Each blob below was written by a real conversation and confirmed afterwards:
+**Each blob below was written by a real conversation and confirmed afterwards:**
 
 | Blob id | What was remembered |
 | --- | --- |
@@ -194,7 +194,7 @@ The provider follows the common OpenAI format on purpose, so Reggie is not tied 
 Changing `LLM_BASE_URL` and `LLM_MODEL` moves the whole app to another provider, or to a model
 running on your own machine.
 
-One honest caveat. This model is fast and cheap, but OpenRouter accepts the request for strictly
+**One honest caveat.** This model is fast and cheap, but OpenRouter accepts the request for strictly
 formatted JSON and then quietly ignores it. So Reggie asks for JSON as ordinary text, reads it,
 checks it is the right shape, and tries once more if it is not. A model that truly honoured
 formatting would let that safety net be removed.
@@ -219,9 +219,9 @@ you does not narrate their own memory.
 
 ## Asking for something is not a preference
 
-The hardest part is not remembering. It is refusing to remember the wrong thing. An early version
-stored "I want to buy rice" as a standing preference, which turned a single shopping line into a
-permanent trait.
+**The hardest part is not remembering. It is refusing to remember the wrong thing.** An early
+version stored "I want to buy rice" as a standing preference, which turned a single shopping line
+into a permanent trait.
 
 The rules now:
 
@@ -259,7 +259,7 @@ stored as "The customer lives in Yaba" is shown as "You live in Yaba".
     memories       one row per fact: area, label, text, blob id, job id, active
 
 The `memories` table is a local record and a trail for checking. The real copy is the Walrus blob.
-The blob id is the link between the two, and it stays empty until Walrus confirms the write.
+**The blob id is the link between the two**, and it stays empty until Walrus confirms the write.
 
 ## Tech stack
 
@@ -270,21 +270,21 @@ The blob id is the link between the two, and it stays empty until Walrus confirm
 
 ## Running it yourself
 
-1. Copy the example settings file:
+1. **Copy the example settings file:**
 
         copy .env.example .env.local
 
-2. Fill in `SESSION_SECRET` (32 characters or more), `MEMWAL_PRIVATE_KEY`, `MEMWAL_ACCOUNT_ID`,
+2. **Fill in** `SESSION_SECRET` (32 characters or more), `MEMWAL_PRIVATE_KEY`, `MEMWAL_ACCOUNT_ID`,
    `LLM_API_KEY` and `LLM_MODEL`. Check the Walrus details with:
 
         node scripts/memwal-live-check.mjs
 
-3. Install and start:
+3. **Install and start:**
 
         npm install
         npm run dev
 
-4. Open http://localhost:3002. The storefront is at http://localhost:3002/store.
+4. **Open** http://localhost:3002. The storefront is at http://localhost:3002/store.
 
 The database file and its tables are created automatically the first time the app is used.
 

@@ -8,6 +8,7 @@ const schema = z.object({
   LLM_API_KEY: z.string().default(''),
   LLM_MODEL: z.string().min(1, 'required'),
   DATABASE_URL: z.string().min(1).default('file:./data/app.db'),
+  DATABASE_AUTH_TOKEN: z.string().default(''),
   SESSION_SECRET: z.string().min(32, 'must be at least 32 characters'),
   TENANT_ID: z.string().min(1).default('regency'),
   ADMIN_EMAILS: z.string().default(''),

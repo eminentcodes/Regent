@@ -1,4 +1,4 @@
-﻿import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -9,29 +9,6 @@ export const users = sqliteTable("users", {
   lastActiveAt: text("last_active_at").notNull(),
 })
 
-export const groups = sqliteTable("groups", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  createdBy: text("created_by").notNull(),
-  createdAt: text("created_at").notNull(),
-})
-
-export const memberships = sqliteTable("memberships", {
-  id: text("id").primaryKey(),
-  groupId: text("group_id").notNull(),
-  userId: text("user_id").notNull(),
-  role: text("role").notNull(),
-  joinedAt: text("joined_at").notNull(),
-})
-
-export const invites = sqliteTable("invites", {
-  id: text("id").primaryKey(),
-  groupId: text("group_id").notNull(),
-  code: text("code").notNull().unique(),
-  createdBy: text("created_by").notNull(),
-  createdAt: text("created_at").notNull(),
-})
 export const conversations = sqliteTable("conversations", {
   id: text("id").primaryKey(),
   groupId: text("group_id").notNull(),
