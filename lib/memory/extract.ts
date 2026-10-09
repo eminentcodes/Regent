@@ -4,6 +4,7 @@ import { memwal, personalNamespace, sharedNamespace } from '@/lib/memwal'
 import { languageModel } from '@/lib/llm'
 import { confirmMemoryBlob, pendingBlobJobs, recordMemory } from '@/lib/db/repo'
 import { MEMORY_TAGS, formatFact, looksPersonal } from './taxonomy'
+import { fallbackFact } from './patterns'
 
 /**
  * Extraction is where memory quality is won or lost. We own it instead of
@@ -55,6 +56,16 @@ const EXTRACTION_SYSTEM = [
   '- scope shared is rare and never about one customer. Use it only for a genuinely new shop-wide insight that is not shop information and cannot identify anyone.',
   '- NEVER put names, emails, phone numbers, addresses or account ids into a shared fact.',
   '- Extract every fact worth keeping from this exchange, not just one. An empty facts array is only for exchanges where they told you nothing about themselves.',
+  '- When in doubt, store it. The failure that matters is leaving out something the customer told you about themselves, not adding one detail too many.',
+  '- A fact can be small. A name, a street, a child who likes a snack, a brand they trust, a time they prefer. Anything that would be useful to know next visit is worth storing.',
+  '',
+  'Examples of the right output:',
+  '- Customer: "I live at 12 Admiralty Way, Lekki" -> {"tag":"profile","scope":"personal","text":"The customer lives at 12 Admiralty Way, Lekki."}',
+  '- Customer: "my daughter loves the plantain chips" -> {"tag":"profile","scope":"personal","text":"The customer has a daughter who loves plantain chips."}',
+  '- Customer: "my usual is 2 x brown beans and 1 x rice" -> {"tag":"pref","scope":"personal","text":"The usual order for this customer is 2 x brown beans and 1 x rice."}',
+  '- Customer: "I am allergic to peanuts" -> {"tag":"pref","scope":"personal","text":"The customer is allergic to peanuts."}',
+  '- Customer: "you delivered my rice late last week" -> {"tag":"issue","scope":"personal","text":"The customer had a late delivery last week."}',
+  '- Customer: "hi, how much is rice" -> {"facts":[]}',
 ].join('\n')
 
 const JSON_CONTRACT =
@@ -148,6 +159,21 @@ export async function extractAndStore(input: {
           ? sharedNamespace(input.groupId)
           : personalNamespace(input.groupId, input.userId),
       })
+    }
+
+    if (prepared.length === 0) {
+      // Safety net. The model is the good reader of an exchange, but a detail
+      // about the customer must never be lost because that call failed, timed
+      // out, or came back empty. This path records it by rule instead.
+      const rescued = fallbackFact(input.userMessage)
+      if (rescued) {
+        prepared.push({
+          text: formatFact(rescued.tag, rescued.text),
+          tag: rescued.tag,
+          scope: 'personal',
+          namespace: personalNamespace(input.groupId, input.userId),
+        })
+      }
     }
 
     if (prepared.length === 0) {

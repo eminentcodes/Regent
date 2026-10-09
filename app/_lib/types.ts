@@ -28,6 +28,9 @@ export type Memory = {
   source: string
   active: boolean
   createdAt: string
+  /** The Walrus blob for this fact, once the relayer confirms the write. */
+  blobId?: string | null
+  blobUrl?: string | null
 }
 
 export type MemoryList = {

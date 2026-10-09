@@ -2,6 +2,7 @@
 
 import type { UIMessage } from 'ai'
 import { motion, useReducedMotion } from 'motion/react'
+import { ArrowUpRight, Database } from 'lucide-react'
 import { AssistantAvatar } from '../brand'
 import { RecallChip, StreamCaret, TypingDots } from './recall-chip'
 import { cx } from '../ui/primitives'
@@ -16,10 +17,12 @@ export function messageText(message: UIMessage): string {
 export function MessageBubble({
   message,
   recall,
+  saved,
   streaming = false,
 }: {
   message: UIMessage
   recall?: number
+  saved?: { count: number; blobUrl: string | null }
   streaming?: boolean
 }) {
   const reduceMotion = useReducedMotion()
@@ -62,6 +65,19 @@ export function MessageBubble({
           ) : null}
         </div>
         <RecallChip count={recall ?? 0} />
+        {saved ? (
+          <p className='mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.74rem] font-medium text-ink-faint'>
+            <Database className='size-3.5 text-leaf' strokeWidth={1.9} aria-hidden='true' />
+            <span>saved {saved.count} {saved.count === 1 ? 'detail' : 'details'} to your memory</span>
+            {saved.blobUrl ? (
+              <a href={saved.blobUrl} target='_blank' rel='noopener noreferrer'
+                className='inline-flex items-center gap-0.5 text-leaf hover:underline'>
+                on Walrus <ArrowUpRight className='size-3' aria-hidden='true' />
+                <span className='sr-only'> (opens in a new tab)</span>
+              </a>
+            ) : null}
+          </p>
+        ) : null}
       </div>
     </motion.div>
   )

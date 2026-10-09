@@ -14,6 +14,8 @@ import { MemoryDegradedLine, TypingDots } from './recall-chip'
 import { useThread } from './use-thread'
 import { YourUsualPanel } from './your-usual-panel'
 import { STORE_LOCATION } from '@/app/_lib/store'
+import { api } from '@/app/_lib/api'
+import type { MemoryList } from '@/app/_lib/types'
 
 const PENDING_KEY = 'regent:pending-message'
 const PROMPTS = [
@@ -46,10 +48,15 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
   const [gateOpen, setGateOpen] = useState(false)
   const [focusToken, setFocusToken] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Per reply: how much of what the customer just said reached Walrus Memory.
+  const [saved, setSaved] = useState<Record<number, { count: number; blobUrl: string | null }>>({})
+  const knownMemoryIds = useRef<Set<string> | null>(null)
   const stickRef = useRef(true)
   const scrollRef = useRef<HTMLDivElement>(null)
   const resumedRef = useRef(false)
   const busy = thread.status === 'submitted' || thread.status === 'streaming'
+
+  const refreshToken = Math.floor((thread.messages.length - (busy ? 1 : 0)) / 2)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -84,11 +91,13 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
       rememberPending(value)
       setHeld(value)
       setGateOpen(true)
+      setDraft('')
       return
     }
     rememberPending(null)
     setHeld(null)
     setGateOpen(false)
+    setDraft('')
     await thread.sendMessage({ text: value })
   }
 
@@ -99,12 +108,49 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
     thread.clearError()
     setHeld(null)
     setGateOpen(false)
+    setDraft('')
     setFocusToken((value) => value + 1)
   }
   function selectPrompt(message: string) {
     setDraft(message)
     setFocusToken((value) => value + 1)
   }
+  const assistantTurns = thread.messages.filter((message) => message.role === 'assistant').length
+
+  useEffect(() => {
+    if (session.status !== 'user' || assistantTurns === 0) return
+    let cancelled = false
+
+    async function check() {
+      try {
+        const data = await api<MemoryList>('/api/memory')
+        if (cancelled) return
+        const ids = new Set(data.memories.map((memory) => memory.id))
+        const known = knownMemoryIds.current
+        knownMemoryIds.current = ids
+        // The first look of a visit only records what was already there.
+        if (!known) return
+        const fresh = data.memories.filter((memory) => !known.has(memory.id))
+        if (fresh.length === 0) return
+        setSaved((current) => ({
+          ...current,
+          [assistantTurns - 1]: {
+            count: fresh.length,
+            blobUrl: fresh.find((memory) => memory.blobUrl)?.blobUrl ?? null,
+          },
+        }))
+      } catch { /* The usual panel already reports memory trouble. */ }
+    }
+
+    // A fact is written just after the reply, and Walrus confirms the blob a
+    // little later, so this looks more than once.
+    const timers = [3000, 12000, 25000].map((delay) => setTimeout(() => { void check() }, delay))
+    return () => {
+      cancelled = true
+      for (const timer of timers) clearTimeout(timer)
+    }
+  }, [assistantTurns, session.status])
+
   function handleScroll() {
     const el = scrollRef.current
     if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 90
@@ -117,12 +163,13 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
     const isLast = message.id === thread.messages[thread.messages.length - 1]?.id
     rows.push(<MessageBubble key={message.id} message={message}
       recall={isAssistant ? thread.recallNotes[assistantIndex]?.count : undefined}
+      saved={isAssistant ? saved[assistantIndex] : undefined}
       streaming={isAssistant && isLast && busy} />)
   }
   const empty = thread.messages.length === 0 && !held && !gateOpen
 
   return (
-    <AppShell fill sidebar={<YourUsualPanel />}>
+    <AppShell fill sidebar={<YourUsualPanel refreshToken={refreshToken} />}>
       <header className='chat-header'>
         <span className='grid size-8 place-items-center rounded-full bg-lavender-tint'><Sparkles className='size-4' strokeWidth={1.6} /></span>
         <div>
@@ -172,7 +219,7 @@ function ChatWorkspace({ initialDraft, autoSend }: { initialDraft: string; autoS
       </div>
 
       <Modal open={sheetOpen} onClose={() => setSheetOpen(false)} title='Your usual' sheet>
-        {sheetOpen ? <YourUsualPanel /> : null}
+        {sheetOpen ? <YourUsualPanel refreshToken={refreshToken} /> : null}
       </Modal>
     </AppShell>
   )
