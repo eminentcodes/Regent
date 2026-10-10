@@ -6,6 +6,8 @@ Regent is a chat-based ordering assistant for Regency Stores, a neighbourhood gr
 
 Built for **Walrus Sessions 8: Chatbots That Remember**.
 
+Demo video : https://youtu.be/HnYjskYabq8
+
 ---
 
 ## Contents
@@ -106,7 +108,7 @@ in the app is a local copy, not the original — the original is the Walrus blob
 
 ## Proof of writes on Walrus mainnet
 
-The numbers below were read from the running database at the time of writing.
+The numbers below were read from the time of writing.
 
 | Measure                | Value  |
 | ---------------------- | ------ |
@@ -115,7 +117,7 @@ The numbers below were read from the running database at the time of writing.
 | Accounts with memory   | 8      |
 | Turns recorded         | 154    |
 
-The writes are tied to a real account on chain:
+The writes are tied to this account on chain:
 
 | Thing           | Value                                                                |
 | --------------- | -------------------------------------------------------------------- |
@@ -126,7 +128,7 @@ The writes are tied to a real account on chain:
 | Account digest  | `3GahxHvCdpTvvmpqVSKTCFDv45bXB462Vhds3jwcq3e8`                       |
 | Network         | Sui / Walrus **mainnet**                                             |
 
-The package and the account were read back from Sui itself, not copied out of a settings file:
+The package and the account were read back from Sui itself:
 
 ```
 POST https://graphql.mainnet.sui.io/graphql
@@ -215,8 +217,7 @@ The rules now:
     /login       email and password
     /register    email and password
 
-The storefront is a normal page in this app at `/store`. It is not a second server, and the link
-opens a page.
+The storefront is a normal page in this app at `/store`. 
 
 "Your usual" reads the customer's own memories and says them back in the second person, so a row
 stored as "The customer lives in Yaba" is shown as "You live in Yaba".
