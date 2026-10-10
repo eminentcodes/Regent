@@ -103,6 +103,9 @@ async function readFacts(prompt: string): Promise<Facts | null> {
         model: languageModel(),
         system: EXTRACTION_SYSTEM + '\n\n' + JSON_CONTRACT,
         prompt,
+        // Same 402 reason as the chat route: without a cap, OpenRouter refuses
+        // the request outright because it pre-authorises the full output window.
+        maxOutputTokens: 800,
       })
 
       const facts = parseFacts(text)

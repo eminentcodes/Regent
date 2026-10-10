@@ -61,6 +61,11 @@ export async function POST(request: Request) {
     model: languageModel(),
     system: buildSystemPrompt(memoryBlock),
     messages,
+    // OpenRouter pre-authorises the model's full default output window before
+    // it will serve a request, so an uncapped call is refused with a 402 even
+    // when the reply itself would be tiny. Reggie never writes long answers,
+    // so cap the window at something the account can always cover.
+    maxOutputTokens: 1200,
     onFinish: async ({ text }) => {
       await appendTurn({
         groupId: workspaceId,
